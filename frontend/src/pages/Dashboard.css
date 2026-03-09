@@ -1,0 +1,226 @@
+/* Base Dashboard Layout shared by Intern and Admin */
+.dashboard-layout {
+    display: flex;
+    width: 100%;
+}
+
+.dashboard-main {
+    flex: 1;
+    padding: 32px 48px;
+    overflow-y: auto;
+    height: 100vh;
+}
+
+.dashboard-header {
+    margin-bottom: 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dashboard-header h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mt-4 {
+    margin-top: 24px;
+}
+
+.mt-8 {
+    margin-top: 48px;
+}
+
+/* Admin Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 24px;
+}
+
+.stat-card {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 24px;
+}
+
+.stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-main);
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.stat-label {
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* Admin Table */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    text-align: left;
+    padding: 16px 24px;
+    background: rgba(0, 0, 0, 0.2);
+    color: var(--text-muted);
+    font-weight: 600;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.data-table td {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--glass-border);
+    color: var(--text-main);
+}
+
+.data-table tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.data-table tr:last-child td {
+    border-bottom: none;
+}
+
+.mini-progress {
+    width: 100px;
+    height: 6px;
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+.mini-progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+
+.btn-remind {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--primary);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-remind:hover:not(:disabled) {
+    background: var(--primary);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.btn-remind:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn-remind:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(1);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 48px;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Admin send-all reminder button */
+.btn-remind-all {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, var(--secondary), #d946ef);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 14px rgba(236, 72, 153, 0.35);
+    white-space: nowrap;
+}
+
+.btn-remind-all:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(236, 72, 153, 0.5);
+}
+
+.btn-remind-all:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.btn-remind-all:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Reminder feedback toast */
+.reminder-toast {
+    padding: 14px 20px;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    margin-bottom: 24px;
+    animation: fadeIn 0.3s ease;
+}
+
+.reminder-toast.success {
+    background: rgba(16, 185, 129, 0.12);
+    border-left: 4px solid var(--success);
+    color: #6ee7b7;
+}
+
+.reminder-toast.error {
+    background: rgba(239, 68, 68, 0.1);
+    border-left: 4px solid var(--danger);
+    color: #fca5a5;
+}
+
+/* Task type badge */
+.task-type-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--primary);
+    margin-bottom: 8px;
+}
