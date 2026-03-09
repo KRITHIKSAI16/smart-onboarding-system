@@ -1,6 +1,23 @@
 const User = require("../models/User");
+const Task = require("../models/Task");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+
+const defaultTasks = [
+  {
+    title: "Submit ID Proof",
+    description: "Upload Aadhaar or Passport"
+  },
+  {
+    title: "Complete Orientation",
+    description: "Watch company onboarding video"
+  },
+  {
+    title: "Setup Development Environment",
+    description: "Install required tools"
+  }
+];
+
 
 
 // REGISTER USER
@@ -29,6 +46,29 @@ const registerUser = async (req, res) => {
             password: hashedPassword,
             role
         });
+
+        // AUTO ASSIGN DEFAULT TASKS FOR INTERN
+if (role === "intern") {
+
+  const tasks = defaultTasks.map(task => ({
+    title: task.title,
+    description: task.description,
+    taskType: "admin",
+
+    assignments: [
+      {
+        user: user._id,
+        status: "pending"
+      }
+    ],
+
+    totalAssigned: 1,
+    completedCount: 0,
+    createdBy: user._id
+  }));
+
+  await Task.insertMany(tasks);
+}
 
         res.status(201).json({
             message: "User registered successfully",
@@ -103,7 +143,6 @@ const loginUser = async (req, res) => {
 
     }
 };
-
 
 module.exports = {
     registerUser,
