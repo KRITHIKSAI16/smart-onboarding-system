@@ -3,11 +3,17 @@ const sendEmail = require("../utils/sendEmail");
 const User = require("../models/User");
 
 
+
 // SEND REMINDERS
 const sendTaskReminders = async (req, res) => {
   try {
 
-    const tasks = await Task.find();
+        const reminderDate = new Date();
+    reminderDate.setDate(reminderDate.getDate() + 7);
+
+    const tasks = await Task.find({
+    deadline: { $lte: reminderDate }
+    });
 
     const userTasks = {};
 
@@ -32,13 +38,15 @@ const sendTaskReminders = async (req, res) => {
 
     for (const userId in userTasks) {
 
-      const user = await User.findById(userId);
+  try {
 
-      const taskList = userTasks[userId]
-        .map(task => `- ${task}`)
-        .join("\n");
+    const user = await User.findById(userId);
 
-      const emailText = `
+    const taskList = userTasks[userId]
+      .map(task => `- ${task}`)
+      .join("\n");
+
+    const emailText = `
 Hello ${user.name},
 
 You have pending onboarding tasks:
@@ -51,9 +59,18 @@ Regards,
 Onboarding System
 `;
 
-      await sendEmail(user.email, "Onboarding Task Reminder", emailText);
+    await sendEmail(user.email, "Onboarding Task Reminder", emailText);
 
-    }
+    // delay to avoid mailtrap rate limit
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+  } catch (err) {
+
+    console.log("Email failed for user:", userId, err.message);
+
+  }
+
+}
 
     res.json({
       message: "Reminder emails sent successfully"
@@ -240,11 +257,62 @@ const getTaskAnalytics = async (req, res) => {
   }
 };
 
+// INTERN PROGRESS API
+const getUserProgress = async (req, res) => {
+  try {
+
+    const userId = req.user.id;
+
+    const tasks = await Task.find({
+      "assignments.user": userId
+    });
+
+    let totalTasks = tasks.length;
+    let completed = 0;
+
+    tasks.forEach(task => {
+
+      const assignment = task.assignments.find(
+        a => a.user.toString() === userId
+      );
+
+      if (assignment && assignment.status === "completed") {
+        completed++;
+      }
+
+    });
+
+    const pending = totalTasks - completed;
+
+    const progress =
+      totalTasks === 0
+        ? 0
+        : Math.round((completed / totalTasks) * 100);
+
+    res.json({
+      totalTasks,
+      completed,
+      pending,
+      progress: progress + "%"
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Server error",
+      error: error.message
+    });
+
+  }
+};
+
+
 module.exports = {
   createTask,
   getUserTasks,
   markTaskCompleted,
   deleteTask,
   getTaskAnalytics,
-  sendTaskReminders
+  sendTaskReminders,
+  getUserProgress
 };

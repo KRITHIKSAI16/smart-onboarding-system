@@ -50,6 +50,9 @@ const registerUser = async (req, res) => {
         // AUTO ASSIGN DEFAULT TASKS FOR INTERN
 if (role === "intern") {
 
+  const deadline = new Date();
+  deadline.setDate(deadline.getDate() + 7);
+
   const tasks = defaultTasks.map(task => ({
     title: task.title,
     description: task.description,
@@ -64,6 +67,7 @@ if (role === "intern") {
 
     totalAssigned: 1,
     completedCount: 0,
+    deadline: deadline,
     createdBy: user._id
   }));
 

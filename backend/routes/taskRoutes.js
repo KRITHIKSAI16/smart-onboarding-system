@@ -2,11 +2,12 @@ const express = require("express");
 const router = express.Router();
 
 const {
- createTask,
- getUserTasks,
- markTaskCompleted,
- deleteTask,
- getTaskAnalytics
+  createTask,
+  getUserTasks,
+  markTaskCompleted,
+  deleteTask,
+  getTaskAnalytics,
+  getUserProgress
 } = require("../controllers/taskController");
 
 const { sendTaskReminders } = require("../controllers/taskController");
@@ -14,6 +15,8 @@ const { sendTaskReminders } = require("../controllers/taskController");
 const { protect, authorize } = require("../middleware/authMiddleware");
 
 router.post("/", protect, createTask);
+
+router.get("/progress", protect, getUserProgress);
 
 router.get("/", protect, getUserTasks);
 
@@ -33,5 +36,6 @@ router.post(
   authorize("admin"),
   sendTaskReminders
 );
+
 
 module.exports = router;
