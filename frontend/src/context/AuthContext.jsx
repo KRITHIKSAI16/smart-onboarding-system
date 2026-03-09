@@ -1,54 +1,55 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+import { createContext, useContext, useState, useCallback } from 'react';
+import API from '../services/api';
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
-export const useAuth = () => useContext(AuthContext);
-
-export const AuthProvider = ({ children }) => {
-    const [currentUser, setCurrentUser] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        const user = localStorage.getItem('user');
-
-        if (token && user) {
-            const parsedUser = JSON.parse(user);
-            setCurrentUser(parsedUser);
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+export function AuthProvider({ children }) {
+    const [user, setUser] = useState(() => {
+        try {
+            const saved = localStorage.getItem('user');
+            return saved ? JSON.parse(saved) : null;
+        } catch {
+            return null;
         }
-        setLoading(false);
+    });
+    const [token, setToken] = useState(() => localStorage.getItem('token') || null);
+
+    const saveSession = (userData, tokenData) => {
+        setUser(userData);
+        setToken(tokenData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('token', tokenData);
+    };
+
+    const login = useCallback(async (email, password) => {
+        const res = await API.post('/auth/login', { email, password });
+        const { user: userData, token: tokenData } = res.data;
+        saveSession(userData, tokenData);
+        return userData;
     }, []);
 
-    const login = async (email, password) => {
-        try {
-            const response = await axios.post('/api/auth/login', { email, password });
-            const { token, user } = response.data;
-            // Backend returns user.id (not user._id)
-            localStorage.setItem('token', token);
-            localStorage.setItem('user', JSON.stringify(user));
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            setCurrentUser(user);
-            return { success: true, role: user.role };
-        } catch (error) {
-            return {
-                success: false,
-                message: error.response?.data?.message || 'Login failed. Please check your credentials.'
-            };
-        }
-    };
+    const register = useCallback(async (name, email, password, role) => {
+        await API.post('/auth/register', { name, email, password, role });
+    }, []);
 
-    const logout = () => {
-        localStorage.removeItem('token');
+    const logout = useCallback(() => {
+        setUser(null);
+        setToken(null);
         localStorage.removeItem('user');
-        delete axios.defaults.headers.common['Authorization'];
-        setCurrentUser(null);
-    };
+        localStorage.removeItem('token');
+    }, []);
+
+    const isAdmin = user?.role === 'admin';
 
     return (
-        <AuthContext.Provider value={{ currentUser, loading, login, logout }}>
-            {!loading && children}
+        <AuthContext.Provider value={{ user, token, login, register, logout, isAdmin }}>
+            {children}
         </AuthContext.Provider>
     );
-};
+}
+
+export function useAuth() {
+    const ctx = useContext(AuthContext);
+    if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+    return ctx;
+}

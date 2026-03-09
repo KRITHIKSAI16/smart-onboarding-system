@@ -1,237 +1,292 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState, useEffect, useCallback } from 'react';
 import Sidebar from '../components/Sidebar';
-import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
-} from 'recharts';
-import { Mail, CheckCircle, Clock, BarChart2, Loader2 } from 'lucide-react';
-import './Dashboard.css';
+import Navbar from '../components/Navbar';
+import AnalyticsChart from '../components/AnalyticsChart';
+import API from '../services/api';
 
-const AdminDashboard = () => {
-    // Backend GET /api/tasks/admin/task-analytics returns:
-    // [{ task: "Title", assigned: N, completed: N, pending: N, completionRate: "75%" }, ...]
+const INIT_TASK = { title: '', description: '', deadline: '', assignedUsers: '' };
+
+// Icon components
+const icons = {
+    tasks: (cls) => <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>,
+    users: (cls) => <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
+    check: (cls) => <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+    clock: (cls) => <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+};
+
+const STAT_CONFIG = [
+    { key: 'totalTasks', label: 'Task Types', icon: icons.tasks, colors: { bg: 'bg-brand-50', border: 'border-brand-100', iconBg: 'bg-brand-100', text: 'text-brand-700', iconCls: 'w-5 h-5 text-brand-600' } },
+    { key: 'totalAssigned', label: 'Total Assigned', icon: icons.users, colors: { bg: 'bg-violet-50', border: 'border-violet-100', iconBg: 'bg-violet-100', text: 'text-violet-700', iconCls: 'w-5 h-5 text-violet-600' } },
+    { key: 'totalCompleted', label: 'Completed', icon: icons.check, colors: { bg: 'bg-emerald-50', border: 'border-emerald-100', iconBg: 'bg-emerald-100', text: 'text-emerald-700', iconCls: 'w-5 h-5 text-emerald-600' } },
+    { key: 'totalPending', label: 'Pending', icon: icons.clock, colors: { bg: 'bg-amber-50', border: 'border-amber-100', iconBg: 'bg-amber-100', text: 'text-amber-700', iconCls: 'w-5 h-5 text-amber-600' } },
+];
+
+export default function AdminDashboard() {
     const [analytics, setAnalytics] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [form, setForm] = useState(INIT_TASK);
+    const [toast, setToast] = useState(null);
+    const [loadingChart, setLoadingChart] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
     const [sendingReminders, setSendingReminders] = useState(false);
-    const [reminderMsg, setReminderMsg] = useState('');
 
-    useEffect(() => {
-        fetchAnalytics();
+    const showToast = (msg, type = 'success') => {
+        setToast({ msg, type });
+        setTimeout(() => setToast(null), 4000);
+    };
+
+    const fetchAnalytics = useCallback(async () => {
+        try {
+            const res = await API.get('/tasks/admin/task-analytics');
+            setAnalytics(res.data);
+        } catch {
+            showToast('Failed to load analytics', 'error');
+        } finally {
+            setLoadingChart(false);
+        }
     }, []);
 
-    const fetchAnalytics = async () => {
+    useEffect(() => { fetchAnalytics(); }, [fetchAnalytics]);
+
+    const handleCreateTask = async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
         try {
-            // Correct endpoint: GET /api/tasks/admin/task-analytics
-            const res = await axios.get('/api/tasks/admin/task-analytics');
-            setAnalytics(res.data);
-        } catch (error) {
-            console.error('Analytics fetch error:', error.response?.data || error.message);
+            const assignedUsers = form.assignedUsers.split(',').map((id) => id.trim()).filter(Boolean);
+            if (assignedUsers.length === 0) {
+                showToast('Please enter at least one User ID', 'error');
+                setSubmitting(false);
+                return;
+            }
+            await API.post('/tasks', {
+                title: form.title,
+                description: form.description,
+                deadline: form.deadline || undefined,
+                taskType: 'admin',
+                assignedUsers,
+            });
+            showToast('Task created and assigned successfully! ✅');
+            setForm(INIT_TASK);
+            await fetchAnalytics();
+        } catch (err) {
+            showToast(err?.response?.data?.message || 'Failed to create task', 'error');
         } finally {
-            setLoading(false);
+            setSubmitting(false);
         }
     };
 
     const handleSendReminders = async () => {
-        // Correct endpoint: POST /api/tasks/admin/send-reminders
         setSendingReminders(true);
-        setReminderMsg('');
         try {
-            const res = await axios.post('/api/tasks/admin/send-reminders');
-            setReminderMsg(res.data.message || 'Reminders sent!');
-        } catch (error) {
-            setReminderMsg(error.response?.data?.message || 'Failed to send reminders.');
+            const res = await API.post('/tasks/admin/send-reminders');
+            showToast(res.data?.message || 'Reminder emails sent! 📧');
+        } catch (err) {
+            showToast(err?.response?.data?.message || 'Failed to send reminders', 'error');
         } finally {
             setSendingReminders(false);
-            setTimeout(() => setReminderMsg(''), 5000);
         }
     };
 
-    // Derive stats from analytics
-    const totalTasks = analytics.length;
-    const totalAssigned = analytics.reduce((sum, t) => sum + t.assigned, 0);
-    const totalCompleted = analytics.reduce((sum, t) => sum + t.completed, 0);
-    const overallRate = totalAssigned > 0 ? Math.round((totalCompleted / totalAssigned) * 100) : 0;
+    // Compute stats from deduplicated analytics (same dedup logic as chart)
+    const dedupedMap = new Map();
+    analytics.forEach((d) => {
+        const existing = dedupedMap.get(d.task);
+        if (!existing || d.assigned > existing.assigned) dedupedMap.set(d.task, d);
+    });
+    const deduped = Array.from(dedupedMap.values());
+    const aggStats = {
+        totalTasks: deduped.length,
+        totalAssigned: deduped.reduce((s, a) => s + (a.assigned || 0), 0),
+        totalCompleted: deduped.reduce((s, a) => s + (a.completed || 0), 0),
+        totalPending: deduped.reduce((s, a) => s + (a.pending || 0), 0),
+    };
 
-    // Normalize for chart: parse completionRate "75%" → 75
-    const chartData = analytics.map(item => ({
-        name: item.task,
-        completed: item.completed,
-        pending: item.pending,
-        completionRate: parseInt(item.completionRate) || 0
-    }));
+    const overallRate = aggStats.totalAssigned > 0
+        ? Math.round((aggStats.totalCompleted / aggStats.totalAssigned) * 100)
+        : 0;
 
     return (
-        <div className="dashboard-layout">
+        <div className="flex h-screen overflow-hidden bg-surface-50">
             <Sidebar />
 
-            <main className="dashboard-main">
-                <header className="dashboard-header">
-                    <div>
-                        <h1 className="title-gradient">Admin Dashboard</h1>
-                        <p className="subtitle">Monitor intern onboarding progress and send reminders.</p>
-                    </div>
+            <div className="flex-1 flex flex-col overflow-hidden">
+                <Navbar title="Admin Dashboard" />
 
-                    {/* Send All Reminders Button - POST /api/tasks/admin/send-reminders */}
-                    <button
-                        className="btn-remind-all"
-                        onClick={handleSendReminders}
-                        disabled={sendingReminders}
-                        title="Send email reminders to all interns with pending tasks"
-                    >
-                        {sendingReminders
-                            ? <><Loader2 className="spinner" size={18} /> Sending...</>
-                            : <><Mail size={18} /> Send Reminders</>
-                        }
-                    </button>
-                </header>
-
-                {reminderMsg && (
-                    <div className={`reminder-toast ${reminderMsg.includes('Failed') ? 'error' : 'success'}`}>
-                        {reminderMsg}
+                {/* Toast */}
+                {toast && (
+                    <div className={`fixed top-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-2xl text-sm font-semibold animate-slide-up max-w-xs ${toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-surface-900 text-white'
+                        }`}>
+                        {toast.type !== 'error' && (
+                            <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                        )}
+                        {toast.msg}
                     </div>
                 )}
 
-                {loading ? (
-                    <div className="flex-center" style={{ height: '300px' }}>
-                        <Loader2 className="spinner" size={40} color="var(--primary)" />
+                <main className="flex-1 overflow-y-auto p-6 space-y-6">
+
+                    {/* Stats row */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {STAT_CONFIG.map((s) => (
+                            <div key={s.key} className={`rounded-xl p-4 flex items-center gap-4 border ${s.colors.bg} ${s.colors.border}`}>
+                                <div className={`w-10 h-10 rounded-xl ${s.colors.iconBg} flex items-center justify-center shrink-0`}>
+                                    {s.icon(s.colors.iconCls)}
+                                </div>
+                                <div>
+                                    <p className={`text-2xl font-extrabold ${s.colors.text}`}>{aggStats[s.key]}</p>
+                                    <p className="text-xs text-surface-500 font-medium">{s.label}</p>
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                ) : (
-                    <div className="dashboard-content">
-                        {/* Stats Cards */}
-                        <div className="stats-grid">
-                            <div className="stat-card glass-panel">
-                                <div className="stat-icon flex-center" style={{ background: 'rgba(99, 102, 241, 0.2)', color: 'var(--primary)' }}>
-                                    <BarChart2 size={24} />
+
+                    {/* Analytics Chart */}
+                    <div className="card">
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h2 className="text-base font-bold text-surface-800">Task Analytics</h2>
+                                <p className="text-xs text-surface-400 mt-0.5">
+                                    Overall completion rate:&nbsp;
+                                    <span className={`font-bold ${overallRate >= 75 ? 'text-emerald-600' : overallRate >= 40 ? 'text-amber-600' : 'text-red-500'}`}>
+                                        {overallRate}%
+                                    </span>
+                                </p>
+                            </div>
+                            <button onClick={fetchAnalytics} className="btn-secondary text-xs px-3 py-1.5 gap-1.5">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                Refresh
+                            </button>
+                        </div>
+                        {loadingChart ? (
+                            <div className="h-64 flex items-center justify-center gap-2 text-surface-400 text-sm">
+                                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
+                                Loading analytics…
+                            </div>
+                        ) : (
+                            <AnalyticsChart data={analytics} />
+                        )}
+                    </div>
+
+                    {/* Create Task + Reminders */}
+                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                        {/* Create Task Form — 3 columns */}
+                        <div className="lg:col-span-3 card">
+                            <div className="flex items-center gap-2 mb-5">
+                                <div className="w-7 h-7 rounded-lg bg-brand-100 flex items-center justify-center">
+                                    <svg className="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                                    </svg>
+                                </div>
+                                <h2 className="text-base font-bold text-surface-800">Create Onboarding Task</h2>
+                            </div>
+                            <form onSubmit={handleCreateTask} className="space-y-4">
+                                <div>
+                                    <label className="label">Task Title *</label>
+                                    <input
+                                        type="text"
+                                        value={form.title}
+                                        onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+                                        placeholder="e.g. Submit ID Proof"
+                                        required
+                                        className="input"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="label">Deadline *</label>
+                                        <input
+                                            type="date"
+                                            value={form.deadline}
+                                            onChange={(e) => setForm((p) => ({ ...p, deadline: e.target.value }))}
+                                            required
+                                            className="input"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="label">Assign User IDs *</label>
+                                        <input
+                                            type="text"
+                                            value={form.assignedUsers}
+                                            onChange={(e) => setForm((p) => ({ ...p, assignedUsers: e.target.value }))}
+                                            placeholder="id1, id2, …"
+                                            required
+                                            className="input"
+                                        />
+                                    </div>
                                 </div>
                                 <div>
-                                    <div className="stat-value">{totalTasks}</div>
-                                    <div className="stat-label">Total Task Types</div>
+                                    <label className="label">Description <span className="normal-case font-normal text-surface-400">(optional)</span></label>
+                                    <textarea
+                                        value={form.description}
+                                        onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                                        placeholder="Task description…"
+                                        rows={2}
+                                        className="input resize-none"
+                                    />
                                 </div>
-                            </div>
-                            <div className="stat-card glass-panel">
-                                <div className="stat-icon flex-center" style={{ background: 'rgba(16, 185, 129, 0.2)', color: 'var(--success)' }}>
-                                    <CheckCircle size={24} />
+                                <div className="flex items-center justify-between pt-1">
+                                    <p className="text-xs text-surface-400">
+                                        <svg className="w-3.5 h-3.5 inline mr-1 text-surface-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                        Enter MongoDB User IDs separated by commas
+                                    </p>
+                                    <button type="submit" disabled={submitting} className="btn-primary">
+                                        {submitting ? (
+                                            <>
+                                                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
+                                                Creating…
+                                            </>
+                                        ) : 'Create Task'}
+                                    </button>
                                 </div>
-                                <div>
-                                    <div className="stat-value">{overallRate}%</div>
-                                    <div className="stat-label">Overall Completion</div>
-                                </div>
-                            </div>
-                            <div className="stat-card glass-panel">
-                                <div className="stat-icon flex-center" style={{ background: 'rgba(245, 158, 11, 0.2)', color: 'var(--warning)' }}>
-                                    <Clock size={24} />
-                                </div>
-                                <div>
-                                    <div className="stat-value">{totalAssigned - totalCompleted}</div>
-                                    <div className="stat-label">Pending Assignments</div>
-                                </div>
-                            </div>
+                            </form>
                         </div>
 
-                        {/* Analytics Bar Chart */}
-                        <div className="chart-container glass-panel" style={{ marginTop: '24px' }}>
-                            <h2 className="section-title">Task Completion Analytics</h2>
-                            {analytics.length === 0 ? (
-                                <p style={{ color: 'var(--text-muted)', padding: '24px 0' }}>No task data available yet.</p>
-                            ) : (
-                                <div style={{ height: 320, marginTop: '20px' }}>
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-                                            <XAxis
-                                                dataKey="name"
-                                                stroke="var(--text-muted)"
-                                                tick={{ fontSize: 12 }}
-                                                angle={-30}
-                                                textAnchor="end"
-                                            />
-                                            <YAxis stroke="var(--text-muted)" allowDecimals={false} />
-                                            <Tooltip
-                                                cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                                                contentStyle={{
-                                                    background: 'var(--bg-dark)',
-                                                    border: '1px solid var(--glass-border)',
-                                                    borderRadius: '8px',
-                                                    color: 'var(--text-main)'
-                                                }}
-                                                formatter={(value, name) => [value, name === 'completionRate' ? 'Completion %' : name]}
-                                            />
-                                            <Bar dataKey="completed" name="Completed" radius={[4, 4, 0, 0]}>
-                                                {chartData.map((entry, index) => (
-                                                    <Cell
-                                                        key={`cell-${index}`}
-                                                        fill={entry.completionRate === 100 ? 'var(--success)' : 'var(--primary)'}
-                                                    />
-                                                ))}
-                                            </Bar>
-                                            <Bar dataKey="pending" name="Pending" fill="rgba(245,158,11,0.5)" radius={[4, 4, 0, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
+                        {/* Reminders — 2 columns */}
+                        <div className="lg:col-span-2 card flex flex-col">
+                            <div className="flex items-center gap-2 mb-3">
+                                <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center">
+                                    <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                    </svg>
                                 </div>
-                            )}
-                        </div>
-
-                        {/* Task Analytics Table */}
-                        <div className="admin-intern-list" style={{ marginTop: '36px' }}>
-                            <h2 className="section-title">Task Breakdown</h2>
-                            <div className="glass-panel" style={{ overflow: 'hidden' }}>
-                                <table className="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Task Title</th>
-                                            <th>Assigned</th>
-                                            <th>Completed</th>
-                                            <th>Pending</th>
-                                            <th>Completion %</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {analytics.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
-                                                    No tasks found.
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            analytics.map((item, i) => (
-                                                <tr key={i}>
-                                                    <td style={{ fontWeight: 600 }}>{item.task}</td>
-                                                    <td>{item.assigned}</td>
-                                                    <td>
-                                                        <span style={{ color: 'var(--success)', fontWeight: 600 }}>{item.completed}</span>
-                                                    </td>
-                                                    <td>
-                                                        <span style={{ color: 'var(--warning)', fontWeight: 600 }}>{item.pending}</span>
-                                                    </td>
-                                                    <td>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                            <div className="mini-progress">
-                                                                <div
-                                                                    className="mini-progress-fill"
-                                                                    style={{
-                                                                        width: item.completionRate,
-                                                                        background: parseInt(item.completionRate) === 100
-                                                                            ? 'var(--success)' : 'var(--primary)'
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                                                                {item.completionRate}
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
+                                <h2 className="text-base font-bold text-surface-800">Send Reminders</h2>
                             </div>
+                            <p className="text-xs text-surface-500 mb-4 leading-relaxed">
+                                Email all interns who have pending tasks with a deadline within the next <strong>7 days</strong>.
+                            </p>
+
+                            {/* Stats preview */}
+                            <div className="rounded-xl bg-amber-50 border border-amber-100 p-3 mb-4 flex items-center justify-between">
+                                <span className="text-xs text-amber-700 font-medium">Pending tasks in system</span>
+                                <span className="text-lg font-bold text-amber-700">{aggStats.totalPending}</span>
+                            </div>
+
+                            <button
+                                onClick={handleSendReminders}
+                                disabled={sendingReminders}
+                                className="btn-danger w-full justify-center mt-auto py-3"
+                            >
+                                {sendingReminders ? (
+                                    <>
+                                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
+                                        Sending emails…
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                        </svg>
+                                        Send Reminder Emails
+                                    </>
+                                )}
+                            </button>
                         </div>
                     </div>
-                )}
-            </main>
+                </main>
+            </div>
         </div>
     );
-};
-
-export default AdminDashboard;
+}

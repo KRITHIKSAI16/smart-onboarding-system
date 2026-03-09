@@ -1,41 +1,26 @@
-import React, { useEffect, useState } from 'react';
-import './ProgressBar.css';
+export default function ProgressBar({ progress, label }) {
+    // Accept "75%" string or number 75
+    const raw = typeof progress === 'string' ? parseFloat(progress) : progress;
+    const pct = isNaN(raw) ? 0 : Math.min(Math.max(raw, 0), 100);
 
-const ProgressBar = ({ total, completed }) => {
-    const [width, setWidth] = useState(0);
-
-    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-    useEffect(() => {
-        // Add a slight delay for the animation effect on mount/update
-        const timer = setTimeout(() => {
-            setWidth(percentage);
-        }, 100);
-        return () => clearTimeout(timer);
-    }, [percentage]);
+    const color =
+        pct >= 80 ? 'from-emerald-500 to-emerald-400' :
+            pct >= 50 ? 'from-brand-500 to-brand-400' :
+                pct >= 25 ? 'from-amber-500 to-amber-400' :
+                    'from-red-500 to-red-400';
 
     return (
-        <div className="progress-container glass-panel">
-            <div className="progress-header">
-                <h3 className="progress-title">Onboarding Progress</h3>
-                <span className="progress-text">{percentage}% Fully Completed</span>
+        <div className="w-full space-y-2">
+            <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-surface-600">{label || 'Progress'}</span>
+                <span className="text-sm font-bold text-surface-800">{pct}%</span>
             </div>
-
-            <div className="progress-track">
+            <div className="h-3 w-full bg-surface-100 rounded-full overflow-hidden">
                 <div
-                    className="progress-fill"
-                    style={{ width: `${width}%` }}
-                >
-                    {width > 10 && <div className="progress-glow"></div>}
-                </div>
-            </div>
-
-            <div className="progress-stats">
-                <span>{completed} Completed</span>
-                <span>{total - completed} Pending</span>
+                    className={`h-full rounded-full bg-gradient-to-r ${color} transition-all duration-700 ease-out`}
+                    style={{ width: `${pct}%` }}
+                />
             </div>
         </div>
     );
-};
-
-export default ProgressBar;
+}

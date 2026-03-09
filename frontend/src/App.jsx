@@ -1,71 +1,47 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
 import Login from './pages/Login';
-import AdminDashboard from './pages/AdminDashboard';
+import Register from './pages/Register';
 import InternDashboard from './pages/InternDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 
-// Protected Route Component
-const ProtectedRoute = ({ children, allowedRoles }) => {
-    const { currentUser, loading } = useAuth();
-
-    if (loading) {
-        return <div className="flex-center" style={{ height: '100vh' }}>Loading...</div>;
+function ProtectedRoute({ children, requiredRole }) {
+    const { user } = useAuth();
+    if (!user) return <Navigate to="/login" replace />;
+    if (requiredRole && user.role !== requiredRole) {
+        return <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} replace />;
     }
-
-    if (!currentUser) {
-        return <Navigate to="/" replace />;
-    }
-
-    if (allowedRoles && !allowedRoles.includes(currentUser.role)) {
-        return <Navigate to={currentUser.role === 'admin' ? '/admin' : '/intern'} replace />;
-    }
-
     return children;
-};
+}
 
-function AppRoutes() {
-    const { currentUser } = useAuth();
+function RoleRedirect() {
+    const { user } = useAuth();
+    if (!user) return <Navigate to="/login" replace />;
+    return <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} replace />;
+}
 
+export default function App() {
     return (
         <Routes>
-            <Route path="/" element={
-                currentUser ? (
-                    <Navigate to={currentUser.role === 'admin' ? '/admin' : '/intern'} replace />
-                ) : (
-                    <Login />
-                )
-            } />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
             <Route
-                path="/admin"
+                path="/dashboard"
                 element={
-                    <ProtectedRoute allowedRoles={['admin']}>
-                        <AdminDashboard />
-                    </ProtectedRoute>
-                }
-            />
-            <Route
-                path="/intern"
-                element={
-                    <ProtectedRoute allowedRoles={['intern']}>
+                    <ProtectedRoute requiredRole="intern">
                         <InternDashboard />
                     </ProtectedRoute>
                 }
             />
+            <Route
+                path="/admin"
+                element={
+                    <ProtectedRoute requiredRole="admin">
+                        <AdminDashboard />
+                    </ProtectedRoute>
+                }
+            />
+            <Route path="*" element={<RoleRedirect />} />
         </Routes>
     );
 }
-
-function App() {
-    return (
-        <AuthProvider>
-            <BrowserRouter>
-                <div className="app-container">
-                    <AppRoutes />
-                </div>
-            </BrowserRouter>
-        </AuthProvider>
-    );
-}
-
-export default App;
