@@ -13,7 +13,6 @@ const assignmentSchema = new mongoose.Schema({
   }
 });
 
-
 const taskSchema = new mongoose.Schema(
 {
   title: {
@@ -32,6 +31,16 @@ const taskSchema = new mongoose.Schema(
   },
 
   assignments: [assignmentSchema],
+
+  totalAssigned: {
+    type: Number,
+    default: 0
+  },
+
+  completedCount: {
+    type: Number,
+    default: 0
+  },
 
   deadline: {
     type: Date
