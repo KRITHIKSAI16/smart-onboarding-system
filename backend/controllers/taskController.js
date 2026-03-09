@@ -132,11 +132,49 @@ const deleteTask = async (req, res) => {
   }
 };
 
+// ADMIN TASK ANALYTICS
+const getTaskAnalytics = async (req, res) => {
+  try {
 
+    const tasks = await Task.find();
+
+    const analytics = tasks.map(task => {
+
+      const assigned = task.totalAssigned;
+      const completed = task.completedCount;
+      const pending = assigned - completed;
+
+      const completionRate =
+        assigned === 0
+          ? 0
+          : ((completed / assigned) * 100).toFixed(0);
+
+      return {
+        task: task.title,
+        assigned,
+        completed,
+        pending,
+        completionRate: completionRate + "%"
+      };
+
+    });
+
+    res.json(analytics);
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Server error",
+      error: error.message
+    });
+
+  }
+};
 
 module.exports = {
   createTask,
   getUserTasks,
   markTaskCompleted,
-  deleteTask
+  deleteTask,
+  getTaskAnalytics
 };

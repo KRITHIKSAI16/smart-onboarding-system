@@ -5,7 +5,8 @@ const {
  createTask,
  getUserTasks,
  markTaskCompleted,
- deleteTask
+ deleteTask,
+ getTaskAnalytics
 } = require("../controllers/taskController");
 
 const { protect, authorize } = require("../middleware/authMiddleware");
@@ -17,5 +18,11 @@ router.get("/", protect, getUserTasks);
 router.put("/:taskId/complete", protect, markTaskCompleted);
 
 router.delete("/:taskId", protect, authorize("admin"), deleteTask);
+
+router.get("/admin/task-analytics",
+  protect,
+  authorize("admin"),
+  getTaskAnalytics
+);
 
 module.exports = router;
