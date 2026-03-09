@@ -1,5 +1,19 @@
 const mongoose = require("mongoose");
 
+const assignmentSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  },
+
+  status: {
+    type: String,
+    enum: ["pending", "completed"],
+    default: "pending"
+  }
+});
+
+
 const taskSchema = new mongoose.Schema(
 {
   title: {
@@ -11,24 +25,13 @@ const taskSchema = new mongoose.Schema(
     type: String
   },
 
-  assignedTo: [
-  {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User"
-  }
-],
-
-  status: {
-    type: String,
-    enum: ["pending", "completed"],
-    default: "pending"
-  },
-
   taskType: {
     type: String,
     enum: ["admin", "personal"],
     default: "admin"
   },
+
+  assignments: [assignmentSchema],
 
   deadline: {
     type: Date
