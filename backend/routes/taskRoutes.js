@@ -9,6 +9,8 @@ const {
  getTaskAnalytics
 } = require("../controllers/taskController");
 
+const { sendTaskReminders } = require("../controllers/taskController");
+
 const { protect, authorize } = require("../middleware/authMiddleware");
 
 router.post("/", protect, createTask);
@@ -23,6 +25,13 @@ router.get("/admin/task-analytics",
   protect,
   authorize("admin"),
   getTaskAnalytics
+);
+
+router.post(
+  "/admin/send-reminders",
+  protect,
+  authorize("admin"),
+  sendTaskReminders
 );
 
 module.exports = router;

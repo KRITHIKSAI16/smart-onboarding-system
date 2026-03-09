@@ -1,4 +1,73 @@
 const Task = require("../models/Task");
+const sendEmail = require("../utils/sendEmail");
+const User = require("../models/User");
+
+
+// SEND REMINDERS
+const sendTaskReminders = async (req, res) => {
+  try {
+
+    const tasks = await Task.find();
+
+    const userTasks = {};
+
+    tasks.forEach(task => {
+
+      task.assignments.forEach(assign => {
+
+        if (assign.status === "pending") {
+
+          const userId = assign.user.toString();
+
+          if (!userTasks[userId]) {
+            userTasks[userId] = [];
+          }
+
+          userTasks[userId].push(task.title);
+        }
+
+      });
+
+    });
+
+    for (const userId in userTasks) {
+
+      const user = await User.findById(userId);
+
+      const taskList = userTasks[userId]
+        .map(task => `- ${task}`)
+        .join("\n");
+
+      const emailText = `
+Hello ${user.name},
+
+You have pending onboarding tasks:
+
+${taskList}
+
+Please complete them as soon as possible.
+
+Regards,
+Onboarding System
+`;
+
+      await sendEmail(user.email, "Onboarding Task Reminder", emailText);
+
+    }
+
+    res.json({
+      message: "Reminder emails sent successfully"
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Error sending reminders",
+      error: error.message
+    });
+
+  }
+};
 
 
 // CREATE TASK
@@ -176,5 +245,6 @@ module.exports = {
   getUserTasks,
   markTaskCompleted,
   deleteTask,
-  getTaskAnalytics
+  getTaskAnalytics,
+  sendTaskReminders
 };
