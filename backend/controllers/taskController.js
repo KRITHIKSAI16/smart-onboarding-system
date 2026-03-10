@@ -103,6 +103,7 @@ const createTask = async (req, res) => {
   description,
   taskType,
   requiresProof,
+  companyId:req.companyId,
   assignments,
   totalAssigned: assignments.length,
   deadline,
@@ -174,6 +175,7 @@ const createTask = async (req, res) => {
   try {
 
     const tasks = await Task.find({
+       companyId: req.companyId,
       "assignments.status": "submitted",
       "assignments.approvalStatus": "pending"
     })
@@ -300,7 +302,8 @@ const getUserTasks = async (req, res) => {
     const userId = req.user.id;
 
     const tasks = await Task.find({
-      "assignments.user": userId
+      "assignments.user": userId,
+      companyId:req.companyId
     });
 
     res.json(tasks);
@@ -390,7 +393,10 @@ const deleteTask = async (req, res) => {
 const getTaskAnalytics = async (req, res) => {
   try {
 
-    const tasks = await Task.find();
+    const tasks = await Task.find({
+       companyId: req.companyId
+    }
+    );
 
     const analytics = tasks.map(task => {
 
@@ -432,7 +438,8 @@ const getUserProgress = async (req, res) => {
     const userId = req.user.id;
 
     const tasks = await Task.find({
-      "assignments.user": userId
+      "assignments.user": userId,
+       companyId: req.companyId
     });
 
     let totalTasks = tasks.length;
@@ -477,10 +484,11 @@ const getUserProgress = async (req, res) => {
   //intern progress view
 
   const getInternProgress = async (req, res) => {
-
   try {
+    const userFilter = { role: "intern" };
+    if (req.companyId) userFilter.companyId = req.companyId;
 
-    const users = await User.find({ role: "intern" });
+    const users = await User.find(userFilter);
 
     const result = [];
 
@@ -542,7 +550,8 @@ const getUserProgress = async (req, res) => {
     const now = new Date();
 
     const tasks = await Task.find({
-      deadline: { $lt: now }
+      deadline: { $lt: now },
+      ...(req.companyId ? { companyId: req.companyId } : {})
     }).populate("assignments.user", "name email");
 
     const overdue = [];
@@ -581,20 +590,14 @@ const getUserProgress = async (req, res) => {
 
     const getInterns = async (req, res) => {
   try {
+    const filter = { role: "intern" };
+    if (req.companyId) filter.companyId = req.companyId;
 
-    const interns = await User.find(
-      { role: "intern" },
-      "_id name email"
-    );
-
+    const interns = await User.find(filter, "_id name email");
     res.json(interns);
 
   } catch (error) {
-
-    res.status(500).json({
-      message: "Server error"
-    });
-
+    res.status(500).json({ message: "Server error" });
   }
 };
 

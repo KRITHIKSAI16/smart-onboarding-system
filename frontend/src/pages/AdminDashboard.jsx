@@ -83,10 +83,14 @@ export default function AdminDashboard() {
     const [loadingChart, setLoadingChart] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [sendingReminders, setSendingReminders] = useState(false);
-    const [proofModal, setProofModal] = useState(null); // url string
-    const [rejectTarget, setRejectTarget] = useState(null); // { taskId, userId }
+    const [proofModal, setProofModal] = useState(null);
+    const [rejectTarget, setRejectTarget] = useState(null);
     const [rejectLoading, setRejectLoading] = useState(false);
-    const [actionLoading, setActionLoading] = useState(null); // key: `${taskId}_${userId}`
+    const [actionLoading, setActionLoading] = useState(null);
+    // Intern creation
+    const [internForm, setInternForm] = useState({ name: '' });
+    const [submittingIntern, setSubmittingIntern] = useState(false);
+    const [internCreds, setInternCreds] = useState(null);
 
     const showToast = (msg, type = 'success') => {
         setToast({ msg, type });
@@ -106,7 +110,7 @@ export default function AdminDashboard() {
 
     const fetchInterns = useCallback(async () => {
         try {
-            const res = await API.get('/auth/interns');
+            const res = await API.get('/tasks/interns');
             if (res.data && res.data.length > 0) {
                 setInterns(res.data);
                 return;
@@ -114,7 +118,7 @@ export default function AdminDashboard() {
         } catch {
             // fall through to fallback
         }
-        // Fallback: derive from intern-progress (guaranteed to have the real interns)
+        // Fallback: derive from intern-progress
         try {
             const res = await API.get('/tasks/admin/intern-progress');
             const derived = (res.data || []).map((ip) => ({
@@ -218,6 +222,21 @@ export default function AdminDashboard() {
             showToast(err?.response?.data?.message || 'Approval failed', 'error');
         } finally {
             setActionLoading(null);
+        }
+    };
+
+    const handleCreateIntern = async (e) => {
+        e.preventDefault();
+        setSubmittingIntern(true);
+        try {
+            const res = await API.post('/auth/create-intern', internForm);
+            setInternCreds(res.data.credentials);
+            setInternForm({ name: '' });
+            await fetchAll();
+        } catch (err) {
+            showToast(err?.response?.data?.message || 'Failed to create intern', 'error');
+        } finally {
+            setSubmittingIntern(false);
         }
     };
 
@@ -743,6 +762,69 @@ export default function AdminDashboard() {
                                 )}
                             </button>
                         </div>
+                    </div>
+
+                    {/* ── Create Intern ── */}
+                    <div className="card border-2 border-dashed border-emerald-100 bg-emerald-50/30">
+                        {/* Credential modal */}
+                        {internCreds && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                                <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                                            <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-sm font-bold text-surface-800">Intern Created!</h3>
+                                            <p className="text-xs text-surface-400">Share these credentials securely.</p>
+                                        </div>
+                                    </div>
+                                    <div className="rounded-xl bg-surface-50 border border-surface-100 p-3 space-y-2 mb-4">
+                                        {[['Name', internCreds.name], ['Email', internCreds.email], ['Password', internCreds.password], ['Company', internCreds.company]].map(([label, val]) => (
+                                            <div key={label} className="flex items-center justify-between gap-2 py-1 border-b border-surface-50 last:border-0">
+                                                <span className="text-xs text-surface-500 w-20">{label}</span>
+                                                <span className="text-xs font-mono font-semibold text-surface-800 flex-1 truncate">{val}</span>
+                                                <button onClick={() => navigator.clipboard.writeText(val)} className="text-xs text-brand-600 font-medium shrink-0">Copy</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg p-2 mb-4">⚠ User must change password on first login.</p>
+                                    <button onClick={() => setInternCreds(null)} className="btn-primary w-full justify-center">Done</button>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center">
+                                <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
+                            </div>
+                            <h2 className="text-base font-bold text-surface-800">Add New Intern</h2>
+                        </div>
+                        <form onSubmit={handleCreateIntern} className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                            <div className="sm:col-span-2">
+                                <label className="label">Intern Full Name *</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={internForm.name}
+                                    onChange={(e) => setInternForm({ name: e.target.value })}
+                                    placeholder="e.g. Rahul Sharma"
+                                    className="input"
+                                />
+                                {internForm.name && (
+                                    <p className="text-xs text-surface-400 mt-1">
+                                        Email will be auto-generated based on your company domain.
+                                    </p>
+                                )}
+                            </div>
+                            <div>
+                                <button type="submit" disabled={submittingIntern} className="btn-primary w-full justify-center">
+                                    {submittingIntern ? (
+                                        <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg> Creating…</>
+                                    ) : '+ Add Intern'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </main>
             </div>
