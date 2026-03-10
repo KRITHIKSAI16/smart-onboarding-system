@@ -12,7 +12,8 @@ const sendTaskReminders = async (req, res) => {
     reminderDate.setDate(reminderDate.getDate() + 7);
 
     const tasks = await Task.find({
-    deadline: { $lte: reminderDate }
+      deadline: { $lte: reminderDate },
+      ...(req.companyId ? { companyId: req.companyId } : {})
     });
 
     const userTasks = {};

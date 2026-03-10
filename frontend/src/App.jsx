@@ -38,7 +38,7 @@ export default function App() {
     return (
         <Routes>
             <Route path="/login"    element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/register" element={<Navigate to="/login" replace />} />
             <Route path="/change-password" element={<ChangePassword />} />
 
             <Route
