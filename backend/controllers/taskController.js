@@ -91,7 +91,7 @@ Onboarding System
 const createTask = async (req, res) => {
   try {
 
-    const { title, description, assignedUsers, deadline, taskType } = req.body;
+    const { title, description, assignedUsers, deadline, taskType, requiresProof } = req.body;
 
     const assignments = assignedUsers.map(userId => ({
       user: userId,
@@ -99,14 +99,15 @@ const createTask = async (req, res) => {
     }));
 
     const task = await Task.create({
-      title,
-      description,
-      taskType,
-      assignments,
-      totalAssigned: assignments.length,
-      deadline,
-      createdBy: req.user.id
-    });
+  title,
+  description,
+  taskType,
+  requiresProof,
+  assignments,
+  totalAssigned: assignments.length,
+  deadline,
+  createdBy: req.user.id
+});
 
     res.status(201).json({
       message: "Task created successfully",
@@ -121,6 +122,173 @@ const createTask = async (req, res) => {
     });
 
   }
+};
+
+  //Submit proof interns
+
+  const submitProof = async (req, res) => {
+
+  try {
+
+    const { taskId } = req.params;
+    const userId = req.user.id;
+    const { image } = req.body;
+
+    const task = await Task.findById(taskId);
+
+    const assignment = task.assignments.find(
+      a => a.user.toString() === userId
+    );
+
+    if (!assignment) {
+      return res.status(404).json({
+        message: "Task not assigned"
+      });
+    }
+
+    assignment.proofImage = req.file.path;
+  assignment.status = "submitted";
+  assignment.approvalStatus = "pending";
+  assignment.adminComment = "";
+    await task.save();
+
+    res.json({
+      message: "Proof submitted successfully",
+      imageUrl: req.file.path
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Server error",
+      error: error.message
+    });
+
+  }
+
+};
+
+  //pending approvals
+
+    const getPendingApprovals = async (req, res) => {
+  try {
+
+    const tasks = await Task.find({
+      "assignments.status": "submitted",
+      "assignments.approvalStatus": "pending"
+    })
+    .populate("assignments.user", "name email");
+
+    const pending = [];
+
+    tasks.forEach(task => {
+
+      task.assignments.forEach(a => {
+
+        if (a.status === "submitted" && a.approvalStatus === "pending") {
+
+          pending.push({
+            taskId: task._id,
+            taskTitle: task.title,
+            userId: a.user._id,
+            internName: a.user.name,
+            internEmail: a.user.email,
+            proofImage: a.proofImage
+          });
+
+        }
+
+      });
+
+    });
+
+    res.json(pending);
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Server error",
+      error: error.message
+    });
+
+  }
+};
+
+  //admin approve
+
+    const approveTask = async (req, res) => {
+
+  try {
+
+    const { taskId, userId } = req.params;
+
+    const task = await Task.findById(taskId);
+
+    const assignment = task.assignments.find(
+      a => a.user.toString() === userId
+    );
+
+    assignment.status = "completed";
+    assignment.approvalStatus = "approved";
+
+    task.completedCount += 1;
+
+    await task.save();
+
+    res.json({
+      message: "Task approved"
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Server error"
+    });
+
+  }
+
+};
+
+  //admin reject task
+
+    const rejectTask = async (req, res) => {
+
+  try {
+
+    const { taskId, userId } = req.params;
+    const { comment } = req.body;
+
+    const task = await Task.findById(taskId);
+
+    const assignment = task.assignments.find(
+      a => a.user.toString() === userId
+    );
+
+    if (!assignment) {
+      return res.status(404).json({
+        message: "Assignment not found"
+      });
+    }
+
+    assignment.status = "rejected";
+    assignment.approvalStatus = "rejected";
+    assignment.adminComment = comment || "Task rejected";
+
+    await task.save();
+
+    res.json({
+      message: "Task rejected with comment"
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Server error",
+      error: error.message
+    });
+
+  }
+
 };
 
 
@@ -306,6 +474,129 @@ const getUserProgress = async (req, res) => {
   }
 };
 
+  //intern progress view
+
+  const getInternProgress = async (req, res) => {
+
+  try {
+
+    const users = await User.find({ role: "intern" });
+
+    const result = [];
+
+    for (const user of users) {
+
+      const tasks = await Task.find({
+        "assignments.user": user._id
+      });
+
+      let assigned = 0;
+      let completed = 0;
+      let pending = 0;
+
+      tasks.forEach(task => {
+
+        const assignment = task.assignments.find(
+          a => a.user.toString() === user._id.toString()
+        );
+
+        if (assignment) {
+
+          assigned++;
+
+          if (assignment.status === "completed") completed++;
+          else pending++;
+
+        }
+
+      });
+
+      result.push({
+        internId: user._id,
+        internName: user.name,
+        assigned,
+        completed,
+        pending
+      });
+
+    }
+
+    res.json(result);
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Server error"
+    });
+
+  }
+
+};
+
+  //overdue tasks
+
+    const getOverdueTasks = async (req, res) => {
+
+  try {
+
+    const now = new Date();
+
+    const tasks = await Task.find({
+      deadline: { $lt: now }
+    }).populate("assignments.user", "name email");
+
+    const overdue = [];
+
+    tasks.forEach(task => {
+
+      task.assignments.forEach(a => {
+
+        if (a.status !== "completed") {
+
+          overdue.push({
+            taskTitle: task.title,
+            internName: a.user.name,
+            deadline: task.deadline
+          });
+
+        }
+
+      });
+
+    });
+
+    res.json(overdue);
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Server error"
+    });
+
+  }
+
+};
+
+//get interns
+
+    const getInterns = async (req, res) => {
+  try {
+
+    const interns = await User.find(
+      { role: "intern" },
+      "_id name email"
+    );
+
+    res.json(interns);
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Server error"
+    });
+
+  }
+};
 
 module.exports = {
   createTask,
@@ -314,5 +605,12 @@ module.exports = {
   deleteTask,
   getTaskAnalytics,
   sendTaskReminders,
-  getUserProgress
+  getUserProgress,
+  submitProof,
+  approveTask,
+  rejectTask,
+  getPendingApprovals,
+  getInternProgress,
+  getOverdueTasks,
+  getInterns
 };

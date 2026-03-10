@@ -123,8 +123,8 @@ export default function InternDashboard() {
                 {/* Toast */}
                 {toast && (
                     <div className={`fixed top-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-2xl text-sm font-semibold animate-slide-up max-w-xs ${toast.type === 'error'
-                            ? 'bg-red-600 text-white'
-                            : 'bg-surface-900 text-white'
+                        ? 'bg-red-600 text-white'
+                        : 'bg-surface-900 text-white'
                         }`}>
                         {toast.type !== 'error' && (
                             <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -184,7 +184,7 @@ export default function InternDashboard() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {onboardingTasks.map((task) => (
                                     <div key={task._id} className={completing === task._id ? 'opacity-50 pointer-events-none' : ''}>
-                                        <TaskCard task={task} userId={user?.id} onComplete={handleComplete} />
+                                        <TaskCard task={task} userId={user?.id} onComplete={handleComplete} onRefresh={fetchAll} />
                                     </div>
                                 ))}
                             </div>
@@ -209,7 +209,7 @@ export default function InternDashboard() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                                 {personalTasks.map((task) => (
                                     <div key={task._id} className={completing === task._id ? 'opacity-50 pointer-events-none' : ''}>
-                                        <TaskCard task={task} userId={user?.id} onComplete={handleComplete} />
+                                        <TaskCard task={task} userId={user?.id} onComplete={handleComplete} onRefresh={fetchAll} />
                                     </div>
                                 ))}
                             </div>

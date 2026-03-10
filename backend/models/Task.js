@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 
 const assignmentSchema = new mongoose.Schema({
+
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User"
@@ -8,9 +9,25 @@ const assignmentSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ["pending", "completed"],
+    enum: ["pending", "submitted", "completed", "rejected"],
     default: "pending"
+  },
+
+  proofImage: {
+    type: String
+  },
+
+  approvalStatus: {
+    type: String,
+    enum: ["pending", "approved", "rejected"],
+    default: "pending"
+  },
+
+  adminComment: {
+    type: String,
+    default: ""
   }
+
 });
 
 const taskSchema = new mongoose.Schema(
@@ -19,6 +36,10 @@ const taskSchema = new mongoose.Schema(
     type: String,
     required: true
   },
+  requiresProof: {
+  type: Boolean,
+  default: false
+},
 
   description: {
     type: String
