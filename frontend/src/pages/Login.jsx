@@ -18,7 +18,15 @@ export default function Login() {
         setLoading(true);
         try {
             const user = await login(form.email, form.password);
-            navigate(user.role === 'admin' ? '/admin' : '/dashboard', { replace: true });
+            if (user.mustChangePassword) {
+                navigate('/change-password', { replace: true });
+            } else if (user.role === 'super_admin') {
+                navigate('/super-admin', { replace: true });
+            } else if (user.role === 'admin') {
+                navigate('/admin', { replace: true });
+            } else {
+                navigate('/dashboard', { replace: true });
+            }
         } catch (err) {
             setError(err?.response?.data?.message || 'Login failed. Please try again.');
         } finally {
@@ -97,11 +105,8 @@ export default function Login() {
                         </button>
                     </form>
 
-                    <p className="mt-6 text-center text-sm text-surface-500">
-                        Don't have an account?{' '}
-                        <Link to="/register" className="text-brand-600 font-semibold hover:underline">
-                            Register
-                        </Link>
+                    <p className="mt-6 text-center text-sm text-surface-400">
+                        Account access is managed by your company administrator.
                     </p>
                 </div>
             </div>

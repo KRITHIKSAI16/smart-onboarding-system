@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
+const enforceCompanyScope = require("../middleware/companyMiddleware");
+
 const {
   createTask,
   getUserTasks,
@@ -28,6 +30,8 @@ router.post(
   upload.single("proof"),
   submitProof
 );
+
+router.use(protect, enforceCompanyScope);
 
 // CREATE TASK
 router.post("/", protect, createTask);

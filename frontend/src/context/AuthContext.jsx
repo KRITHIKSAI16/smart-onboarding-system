@@ -8,9 +8,7 @@ export function AuthProvider({ children }) {
         try {
             const saved = localStorage.getItem('user');
             return saved ? JSON.parse(saved) : null;
-        } catch {
-            return null;
-        }
+        } catch { return null; }
     });
     const [token, setToken] = useState(() => localStorage.getItem('token') || null);
 
@@ -39,10 +37,26 @@ export function AuthProvider({ children }) {
         localStorage.removeItem('token');
     }, []);
 
-    const isAdmin = user?.role === 'admin';
+    const changePassword = useCallback(async (newPassword) => {
+        await API.put('/auth/change-password', { newPassword });
+        // Clear the flag locally so redirect doesn't loop
+        setUser((prev) => {
+            if (!prev) return prev;
+            const updated = { ...prev, mustChangePassword: false };
+            localStorage.setItem('user', JSON.stringify(updated));
+            return updated;
+        });
+    }, []);
+
+    const isAdmin      = user?.role === 'admin';
+    const isSuperAdmin = user?.role === 'super_admin';
+    const company      = user?.company || null;
 
     return (
-        <AuthContext.Provider value={{ user, token, login, register, logout, isAdmin }}>
+        <AuthContext.Provider value={{
+            user, token, login, register, logout,
+            changePassword, isAdmin, isSuperAdmin, company,
+        }}>
             {children}
         </AuthContext.Provider>
     );

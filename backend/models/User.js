@@ -18,10 +18,20 @@ const userSchema = new mongoose.Schema(
         required: true
     },
 
+    companyId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Company"
+    },
+
     role: {
         type: String,
-        enum: ["admin", "intern"],
+        enum: ["super_admin", "admin", "intern"],
         default: "intern"
+    },
+
+    mustChangePassword: {
+        type: Boolean,
+        default: false
     }
 },
 {
@@ -29,4 +39,4 @@ const userSchema = new mongoose.Schema(
 }
 );
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = mongoose.model("User", userSchema);

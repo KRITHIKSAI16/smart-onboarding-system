@@ -2,10 +2,60 @@ import { useState, useRef } from 'react';
 import API from '../services/api';
 
 const STATUS_CONFIG = {
-    pending: { label: 'Pending', badge: 'bg-amber-100 text-amber-700', emoji: '⏳' },
-    submitted: { label: 'Submitted for Approval', badge: 'bg-blue-100 text-blue-700', emoji: '📤' },
-    completed: { label: 'Completed', badge: 'bg-emerald-100 text-emerald-700', emoji: '✓' },
-    rejected: { label: 'Rejected', badge: 'bg-red-100 text-red-600', emoji: '✗' },
+    pending:   { label: 'Pending',                badge: 'bg-amber-100 text-amber-700' },
+    submitted: { label: 'Submitted for Approval', badge: 'bg-blue-100 text-blue-700' },
+    completed: { label: 'Completed',              badge: 'bg-emerald-100 text-emerald-700' },
+    rejected:  { label: 'Rejected',               badge: 'bg-red-100 text-red-600' },
+};
+
+// Small inline SVG icons
+const IconPersonal = () => (
+    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+);
+const IconAssigned = () => (
+    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+    </svg>
+);
+const IconCamera = () => (
+    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+);
+const IconWarning = () => (
+    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>
+);
+const IconPending = () => (
+    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+);
+const IconSubmitted = () => (
+    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+    </svg>
+);
+const IconCheck = () => (
+    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+);
+const IconX = () => (
+    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+);
+
+const STATUS_ICON = {
+    pending:   <IconPending />,
+    submitted: <IconSubmitted />,
+    completed: <IconCheck />,
+    rejected:  <IconX />,
 };
 
 export default function TaskCard({ task, userId, onComplete, onRefresh }) {
@@ -21,9 +71,7 @@ export default function TaskCard({ task, userId, onComplete, onRefresh }) {
     });
 
     const status = assignment?.status || 'pending';
-    const approvalStatus = assignment?.approvalStatus;
     const adminComment = assignment?.adminComment;
-    const proofImage = assignment?.proofImage;
     const isCompleted = status === 'completed';
     const isRejected = status === 'rejected';
     const isSubmitted = status === 'submitted';
@@ -89,19 +137,25 @@ export default function TaskCard({ task, userId, onComplete, onRefresh }) {
             <div className="p-5 flex flex-col gap-3 flex-1">
                 {/* Badges row */}
                 <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`badge text-xs ${isPersonal ? 'bg-blue-100 text-blue-700' : 'bg-violet-100 text-violet-700'}`}>
-                        {isPersonal ? '🙋 Personal' : '📋 Assigned'}
+                    <span className={`badge text-xs gap-1 ${isPersonal ? 'bg-blue-100 text-blue-700' : 'bg-violet-100 text-violet-700'}`}>
+                        {isPersonal ? <IconPersonal /> : <IconAssigned />}
+                        {isPersonal ? 'Personal' : 'Assigned'}
                     </span>
-                    <span className={`badge text-xs ${cfg.badge}`}>
-                        {cfg.emoji} {cfg.label}
+                    <span className={`badge text-xs gap-1 ${cfg.badge}`}>
+                        {STATUS_ICON[status]}
+                        {cfg.label}
                     </span>
                     {requiresProof && !isPersonal && (
-                        <span className="badge text-xs bg-purple-100 text-purple-700">
-                            📸 Proof Required
+                        <span className="badge text-xs gap-1 bg-purple-100 text-purple-700">
+                            <IconCamera />
+                            Proof Required
                         </span>
                     )}
                     {isOverdue && !isCompleted && (
-                        <span className="badge text-xs bg-red-100 text-red-600">⚠ Overdue</span>
+                        <span className="badge text-xs gap-1 bg-red-100 text-red-600">
+                            <IconWarning />
+                            Overdue
+                        </span>
                     )}
                 </div>
 
@@ -141,7 +195,7 @@ export default function TaskCard({ task, userId, onComplete, onRefresh }) {
                     </div>
                 )}
 
-                {/* Proof upload section — show for tasks requiring proof that are pending or rejected */}
+                {/* Proof upload section */}
                 {requiresProof && !isPersonal && !isCompleted && !isSubmitted && (
                     <div className="rounded-lg border border-surface-100 bg-surface-50 p-3 space-y-2">
                         <p className="text-xs font-semibold text-surface-700">Upload Screenshot</p>
@@ -201,7 +255,6 @@ export default function TaskCard({ task, userId, onComplete, onRefresh }) {
                         <span className="text-xs text-surface-300">No deadline</span>
                     )}
 
-                    {/* Complete button — only for non-proof tasks or personal tasks */}
                     {!isCompleted && !isSubmitted && (!requiresProof || isPersonal) && onComplete && (
                         <button
                             onClick={() => onComplete(task._id)}
