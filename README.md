@@ -190,6 +190,14 @@ status =     status = "rejected"
              Intern can resubmit
 ```
 
+---
+
+## 🖼 Screenshots
+
+> _Add screenshots of your admin and intern dashboards here._
+
+---
+
 ## 📄 License
 
 MIT © 2024 — feel free to use, fork, and adapt.

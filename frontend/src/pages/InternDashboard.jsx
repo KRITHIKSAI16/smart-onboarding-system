@@ -58,7 +58,7 @@ export default function InternDashboard() {
         setCompleting(taskId);
         try {
             await API.put(`/tasks/${taskId}/complete`);
-            showToast('Task completed! 🎉 Great work!');
+            showToast('Task completed! Great work!');
             await fetchAll();
         } catch (err) {
             showToast(err?.response?.data?.message || 'Failed to complete task', 'error');
@@ -144,12 +144,15 @@ export default function InternDashboard() {
                                 <h2 className="text-base font-bold text-surface-800">Onboarding Progress</h2>
                                 <p className="text-xs text-surface-400 mt-0.5">
                                     {progressPct === 100
-                                        ? '🎉 Congratulations! All tasks complete!'
+                                        ? 'Congratulations! All tasks complete!'
                                         : `Keep going — you're ${progressPct}% there`}
                                 </p>
                             </div>
                             {progressPct === 100 && (
-                                <span className="badge bg-emerald-100 text-emerald-700 text-xs">🏆 Complete</span>
+                                <span className="badge bg-emerald-100 text-emerald-700 text-xs flex items-center gap-1">
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                    Complete
+                                </span>
                             )}
                         </div>
 
@@ -177,7 +180,9 @@ export default function InternDashboard() {
                             </div>
                         ) : onboardingTasks.length === 0 ? (
                             <div className="card text-center py-10">
-                                <p className="text-2xl mb-2">📭</p>
+                                <div className="w-12 h-12 rounded-xl bg-surface-100 flex items-center justify-center mx-auto mb-3">
+                                    <svg className="w-6 h-6 text-surface-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                                </div>
                                 <p className="text-surface-500 text-sm font-medium">No onboarding tasks assigned yet</p>
                             </div>
                         ) : (
@@ -200,7 +205,9 @@ export default function InternDashboard() {
 
                         {!loadingTasks && personalTasks.length === 0 && (
                             <div className="card text-center py-8 mb-4">
-                                <p className="text-2xl mb-2">✏️</p>
+                                <div className="w-12 h-12 rounded-xl bg-surface-100 flex items-center justify-center mx-auto mb-3">
+                                    <svg className="w-6 h-6 text-surface-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                </div>
                                 <p className="text-surface-500 text-sm font-medium">No personal tasks yet. Add one below!</p>
                             </div>
                         )}
