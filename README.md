@@ -190,6 +190,17 @@ status =     status = "rejected"
              Intern can resubmit
 ```
 
+<<<<<<<<< Temporary merge branch 1
+=========
+---
+
+## 🖼 Screenshots
+
+> _Add screenshots of your admin and intern dashboards here._
+
+---
+
+>>>>>>>>> Temporary merge branch 2
 ## 📄 License
 
 MIT © 2024 — feel free to use, fork, and adapt.
