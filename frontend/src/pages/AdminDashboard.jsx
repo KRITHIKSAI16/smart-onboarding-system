@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
-import AnalyticsChart from '../components/AnalyticsChart';
 import API from '../services/api';
 
 const INIT_TASK = { title: '', description: '', deadline: '', requiresProof: false, assignedUsers: [] };
@@ -189,7 +188,7 @@ export default function AdminDashboard() {
                 requiresProof: form.requiresProof,
                 assignedUsers,
             });
-            showToast('Task created and assigned successfully! ✅');
+            showToast('Task created and assigned successfully!');
             setForm(INIT_TASK);
             await fetchAll();
         } catch (err) {
@@ -203,7 +202,7 @@ export default function AdminDashboard() {
         setSendingReminders(true);
         try {
             const res = await API.post('/tasks/admin/send-reminders');
-            showToast(res.data?.message || 'Reminder emails sent! 📧');
+            showToast(res.data?.message || 'Reminder emails sent!');
         } catch (err) {
             showToast(err?.response?.data?.message || 'Failed to send reminders', 'error');
         } finally {
@@ -216,7 +215,7 @@ export default function AdminDashboard() {
         setActionLoading(key);
         try {
             await API.put(`/tasks/${taskId}/approve/${userId}`);
-            showToast('Proof approved! ✅');
+            showToast('Proof approved!');
             await fetchAll();
         } catch (err) {
             showToast(err?.response?.data?.message || 'Approval failed', 'error');
@@ -329,17 +328,17 @@ export default function AdminDashboard() {
                         ))}
                     </div>
 
-                    {/* Analytics Chart */}
+                    {/* ── Onboarding Overview ── */}
                     <div className="card">
                         <div className="flex items-center justify-between mb-6">
-                            <div>
-                                <h2 className="text-base font-bold text-surface-800">Task Analytics</h2>
-                                <p className="text-xs text-surface-400 mt-0.5">
-                                    Overall completion rate:&nbsp;
-                                    <span className={`font-bold ${overallRate >= 75 ? 'text-emerald-600' : overallRate >= 40 ? 'text-amber-600' : 'text-red-500'}`}>
-                                        {overallRate}%
-                                    </span>
-                                </p>
+                            <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-lg bg-brand-100 flex items-center justify-center">
+                                    <svg className="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                                </div>
+                                <div>
+                                    <h2 className="text-base font-bold text-surface-800">Onboarding Overview</h2>
+                                    <p className="text-xs text-surface-400 mt-0.5">Real-time insights across your team</p>
+                                </div>
                             </div>
                             <button onClick={fetchAll} className="btn-secondary text-xs px-3 py-1.5 gap-1.5">
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -348,13 +347,177 @@ export default function AdminDashboard() {
                                 Refresh
                             </button>
                         </div>
+
                         {loadingChart ? (
                             <div className="h-64 flex items-center justify-center gap-2 text-surface-400 text-sm">
                                 <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
-                                Loading analytics…
+                                Loading overview…
                             </div>
                         ) : (
-                            <AnalyticsChart data={analytics} />
+                            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+                                {/* ── Left: Ring + Metrics (3 cols) ── */}
+                                <div className="lg:col-span-3 space-y-5">
+
+                                    {/* Completion ring + quick metrics row */}
+                                    <div className="flex items-center gap-6">
+
+                                        {/* Circular Progress Ring */}
+                                        <div className="relative shrink-0" style={{ width: 110, height: 110 }}>
+                                            <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                                                <circle cx="18" cy="18" r="15.5" fill="none" stroke="#f1f5f9" strokeWidth="3" />
+                                                <circle
+                                                    cx="18" cy="18" r="15.5" fill="none"
+                                                    strokeWidth="3" strokeLinecap="round"
+                                                    stroke={overallRate >= 75 ? '#059669' : overallRate >= 40 ? '#d97706' : '#dc2626'}
+                                                    strokeDasharray={`${overallRate * 0.9742} 97.42`}
+                                                    style={{ transition: 'stroke-dasharray 0.8s ease-out' }}
+                                                />
+                                            </svg>
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                                <span className={`text-2xl font-extrabold leading-none ${overallRate >= 75 ? 'text-emerald-600' : overallRate >= 40 ? 'text-amber-600' : 'text-red-500'}`}>
+                                                    {overallRate}%
+                                                </span>
+                                                <span className="text-[9px] text-surface-400 font-semibold uppercase tracking-wider mt-0.5">Completed</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Quick metric tiles */}
+                                        <div className="grid grid-cols-2 gap-3 flex-1">
+                                            {[
+                                                { label: 'Pending Approvals', value: pendingApprovals.length, color: 'violet', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
+                                                { label: 'Overdue Tasks', value: overdueTasks.length, color: 'red', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg> },
+                                                { label: 'Active Interns', value: internProgress.length, color: 'emerald', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg> },
+                                                { label: 'Tasks Assigned', value: aggStats.totalAssigned, color: 'brand', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg> },
+                                            ].map((m) => (
+                                                <div key={m.label} className={`rounded-xl border p-3 bg-${m.color}-50 border-${m.color}-100`}>
+                                                    <div className="flex items-center gap-1.5 mb-1.5">
+                                                        <span className={`text-${m.color}-500`}>{m.icon}</span>
+                                                        <span className="text-[10px] text-surface-500 font-semibold uppercase tracking-wide">{m.label}</span>
+                                                    </div>
+                                                    <p className={`text-xl font-extrabold text-${m.color}-700`}>{m.value}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* ── Most Delayed Tasks ── */}
+                                    <div>
+                                        <p className="text-xs font-bold text-surface-600 uppercase tracking-wide mb-2.5 flex items-center gap-1.5">
+                                            <svg className="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                            Most Delayed Tasks
+                                        </p>
+                                        {overdueTasks.length === 0 ? (
+                                            <p className="text-xs text-surface-400 py-2">No delayed tasks — great work!</p>
+                                        ) : (
+                                            <div className="space-y-1.5">
+                                                {overdueTasks.slice(0, 4).map((item, idx) => {
+                                                    const daysOverdue = Math.ceil((new Date() - new Date(item.deadline)) / (1000 * 60 * 60 * 24));
+                                                    return (
+                                                        <div key={idx} className="flex items-center gap-3 py-2 px-3 rounded-lg bg-red-50/50 border border-red-100/60">
+                                                            <div className="w-5 h-5 rounded-md bg-red-100 flex items-center justify-center shrink-0">
+                                                                <span className="text-[10px] font-bold text-red-600">{idx + 1}</span>
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-xs font-semibold text-surface-700 truncate">{item.taskTitle}</p>
+                                                                <p className="text-[10px] text-surface-400">{item.internName}</p>
+                                                            </div>
+                                                            <span className="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full shrink-0">
+                                                                {daysOverdue}d late
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* ── Right: Top Performers (2 cols) ── */}
+                                <div className="lg:col-span-2">
+                                    <p className="text-xs font-bold text-surface-600 uppercase tracking-wide mb-2.5 flex items-center gap-1.5">
+                                        <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                                        Top Performing Interns
+                                    </p>
+                                    {internProgress.length === 0 ? (
+                                        <p className="text-xs text-surface-400 py-2">No intern data yet.</p>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {[...internProgress]
+                                                .map((ip) => ({
+                                                    ...ip,
+                                                    rate: ip.assigned > 0 ? Math.round((ip.completed / ip.assigned) * 100) : 0,
+                                                }))
+                                                .sort((a, b) => b.rate - a.rate)
+                                                .slice(0, 6)
+                                                .map((intern, idx) => (
+                                                    <div key={intern.internId} className="flex items-center gap-3 py-2 px-3 rounded-lg border border-surface-100 hover:bg-surface-50 transition-colors">
+                                                        {/* Rank badge */}
+                                                        <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 text-[10px] font-bold ${
+                                                            idx === 0 ? 'bg-amber-100 text-amber-700' :
+                                                            idx === 1 ? 'bg-surface-200 text-surface-600' :
+                                                            idx === 2 ? 'bg-orange-100 text-orange-700' :
+                                                            'bg-surface-100 text-surface-400'
+                                                        }`}>
+                                                            {idx + 1}
+                                                        </div>
+
+                                                        {/* Avatar */}
+                                                        <div className="w-7 h-7 rounded-full bg-violet-100 flex items-center justify-center text-violet-700 text-xs font-bold shrink-0">
+                                                            {(intern.internName || '?')[0].toUpperCase()}
+                                                        </div>
+
+                                                        {/* Name + progress bar */}
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-xs font-semibold text-surface-800 truncate">{intern.internName}</p>
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                <div className="flex-1 h-1.5 rounded-full bg-surface-100">
+                                                                    <div
+                                                                        className={`h-1.5 rounded-full transition-all duration-500 ${
+                                                                            intern.rate >= 75 ? 'bg-emerald-500' :
+                                                                            intern.rate >= 40 ? 'bg-amber-500' : 'bg-red-400'
+                                                                        }`}
+                                                                        style={{ width: `${intern.rate}%` }}
+                                                                    />
+                                                                </div>
+                                                                <span className={`text-[10px] font-bold shrink-0 ${
+                                                                    intern.rate >= 75 ? 'text-emerald-600' :
+                                                                    intern.rate >= 40 ? 'text-amber-600' : 'text-red-500'
+                                                                }`}>
+                                                                    {intern.rate}%
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Fraction */}
+                                                        <div className="text-right shrink-0">
+                                                            <p className="text-[10px] text-surface-400 font-mono">{intern.completed}/{intern.assigned}</p>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            }
+                                        </div>
+                                    )}
+
+                                    {/* Quick insight */}
+                                    {internProgress.length > 0 && (() => {
+                                        const avgRate = Math.round(
+                                            internProgress.reduce((sum, ip) => sum + (ip.assigned > 0 ? (ip.completed / ip.assigned) * 100 : 0), 0) / internProgress.length
+                                        );
+                                        return (
+                                            <div className="mt-4 rounded-xl bg-brand-50 border border-brand-100 p-3 flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <svg className="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                    <span className="text-xs text-surface-600 font-medium">Avg. Completion Rate</span>
+                                                </div>
+                                                <span className={`text-sm font-extrabold ${avgRate >= 75 ? 'text-emerald-600' : avgRate >= 40 ? 'text-amber-600' : 'text-red-500'}`}>
+                                                    {avgRate}%
+                                                </span>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
                         )}
                     </div>
 
@@ -374,7 +537,9 @@ export default function AdminDashboard() {
 
                         {pendingApprovals.length === 0 ? (
                             <div className="text-center py-8">
-                                <p className="text-2xl mb-2">🎉</p>
+                                <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center mx-auto mb-3">
+                                    <svg className="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                </div>
                                 <p className="text-surface-400 text-sm font-medium">No pending approvals — all caught up!</p>
                             </div>
                         ) : (
@@ -476,7 +641,9 @@ export default function AdminDashboard() {
                             </div>
                             {internProgress.length === 0 ? (
                                 <div className="text-center py-8">
-                                    <p className="text-2xl mb-2">👤</p>
+                                    <div className="w-12 h-12 rounded-xl bg-surface-100 flex items-center justify-center mx-auto mb-3">
+                                        <svg className="w-6 h-6 text-surface-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                    </div>
                                     <p className="text-surface-400 text-sm">No intern data yet.</p>
                                 </div>
                             ) : (
@@ -546,7 +713,9 @@ export default function AdminDashboard() {
                             </div>
                             {overdueTasks.length === 0 ? (
                                 <div className="text-center py-8">
-                                    <p className="text-2xl mb-2">✅</p>
+                                    <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center mx-auto mb-3">
+                                        <svg className="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    </div>
                                     <p className="text-surface-400 text-sm">No overdue tasks — great!</p>
                                 </div>
                             ) : (
@@ -692,8 +861,9 @@ export default function AdminDashboard() {
                                         </div>
                                     )}
                                     {form.assignedUsers.length > 0 && (
-                                        <p className="text-xs text-brand-600 mt-1.5 font-medium">
-                                            ✓ {form.assignedUsers.length} intern{form.assignedUsers.length > 1 ? 's' : ''} selected
+                                        <p className="text-xs text-brand-600 mt-1.5 font-medium flex items-center gap-1">
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                            {form.assignedUsers.length} intern{form.assignedUsers.length > 1 ? 's' : ''} selected
                                         </p>
                                     )}
                                 </div>
@@ -788,7 +958,7 @@ export default function AdminDashboard() {
                                             </div>
                                         ))}
                                     </div>
-                                    <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg p-2 mb-4">⚠ User must change password on first login.</p>
+                                    <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg p-2 mb-4">User must change password on first login.</p>
                                     <button onClick={() => setInternCreds(null)} className="btn-primary w-full justify-center">Done</button>
                                 </div>
                             </div>
