@@ -28,7 +28,7 @@ export function SocketProvider({ children }) {
         if (user.role === 'super_admin') return;
 
         // Connect
-        const newSocket = io('http://localhost:5000', {
+        const newSocket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', {
             auth: { token },
             transports: ['websocket', 'polling'],
         });
