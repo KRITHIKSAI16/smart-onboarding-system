@@ -87,9 +87,14 @@ export default function AdminDashboard() {
     const [rejectLoading, setRejectLoading] = useState(false);
     const [actionLoading, setActionLoading] = useState(null);
     // Intern creation
-    const [internForm, setInternForm] = useState({ name: '' });
+    const [internForm, setInternForm] = useState({ name: '', cohortId: '' });
     const [submittingIntern, setSubmittingIntern] = useState(false);
     const [internCreds, setInternCreds] = useState(null);
+    // Cohort management
+    const [cohorts, setCohorts] = useState([]);
+    const [showCohortForm, setShowCohortForm] = useState(false);
+    const [cohortForm, setCohortForm] = useState({ name: '', description: '' });
+    const [creatingCohort, setCreatingCohort] = useState(false);
 
     const showToast = (msg, type = 'success') => {
         setToast({ msg, type });
@@ -158,6 +163,13 @@ export default function AdminDashboard() {
         }
     }, []);
 
+    const fetchCohorts = useCallback(async () => {
+        try {
+            const res = await API.get('/cohorts');
+            setCohorts(res.data);
+        } catch { /* ignore */ }
+    }, []);
+
     const fetchAll = useCallback(async () => {
         await Promise.all([
             fetchAnalytics(),
@@ -165,8 +177,9 @@ export default function AdminDashboard() {
             fetchPendingApprovals(),
             fetchInternProgress(),
             fetchOverdueTasks(),
+            fetchCohorts(),
         ]);
-    }, [fetchAnalytics, fetchInterns, fetchPendingApprovals, fetchInternProgress, fetchOverdueTasks]);
+    }, [fetchAnalytics, fetchInterns, fetchPendingApprovals, fetchInternProgress, fetchOverdueTasks, fetchCohorts]);
 
     useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -228,9 +241,11 @@ export default function AdminDashboard() {
         e.preventDefault();
         setSubmittingIntern(true);
         try {
-            const res = await API.post('/auth/create-intern', internForm);
+            const payload = { name: internForm.name };
+            if (internForm.cohortId) payload.cohortId = internForm.cohortId;
+            const res = await API.post('/auth/create-intern', payload);
             setInternCreds(res.data.credentials);
-            setInternForm({ name: '' });
+            setInternForm({ name: '', cohortId: '' });
             await fetchAll();
         } catch (err) {
             showToast(err?.response?.data?.message || 'Failed to create intern', 'error');
@@ -469,7 +484,12 @@ export default function AdminDashboard() {
 
                                                         {/* Name + progress bar */}
                                                         <div className="flex-1 min-w-0">
-                                                            <p className="text-xs font-semibold text-surface-800 truncate">{intern.internName}</p>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <p className="text-xs font-semibold text-surface-800 truncate">{intern.internName}</p>
+                                                                {intern.cohortName && (
+                                                                    <span className="text-[9px] font-semibold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded-full border border-violet-100 shrink-0">{intern.cohortName}</span>
+                                                                )}
+                                                            </div>
                                                             <div className="flex items-center gap-2 mt-1">
                                                                 <div className="flex-1 h-1.5 rounded-full bg-surface-100">
                                                                     <div
@@ -970,14 +990,14 @@ export default function AdminDashboard() {
                             </div>
                             <h2 className="text-base font-bold text-surface-800">Add New Intern</h2>
                         </div>
-                        <form onSubmit={handleCreateIntern} className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                        <form onSubmit={handleCreateIntern} className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
                             <div className="sm:col-span-2">
                                 <label className="label">Intern Full Name *</label>
                                 <input
                                     type="text"
                                     required
                                     value={internForm.name}
-                                    onChange={(e) => setInternForm({ name: e.target.value })}
+                                    onChange={(e) => setInternForm({ ...internForm, name: e.target.value })}
                                     placeholder="e.g. Rahul Sharma"
                                     className="input"
                                 />
@@ -988,6 +1008,19 @@ export default function AdminDashboard() {
                                 )}
                             </div>
                             <div>
+                                <label className="label">Cohort</label>
+                                <select
+                                    value={internForm.cohortId}
+                                    onChange={(e) => setInternForm({ ...internForm, cohortId: e.target.value })}
+                                    className="input"
+                                >
+                                    <option value="">No cohort</option>
+                                    {cohorts.map((c) => (
+                                        <option key={c._id} value={c._id}>{c.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
                                 <button type="submit" disabled={submittingIntern} className="btn-primary w-full justify-center">
                                     {submittingIntern ? (
                                         <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg> Creating…</>
@@ -995,6 +1028,113 @@ export default function AdminDashboard() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+
+                    {/* ── Cohort Management ── */}
+                    <div className="card">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-lg bg-violet-100 flex items-center justify-center">
+                                    <svg className="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                                </div>
+                                <h2 className="text-base font-bold text-surface-800">Cohort Management</h2>
+                            </div>
+                            <button
+                                onClick={() => setShowCohortForm(!showCohortForm)}
+                                className="btn-secondary text-xs gap-1"
+                            >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                                New Cohort
+                            </button>
+                        </div>
+
+                        {showCohortForm && (
+                            <form
+                                onSubmit={async (e) => {
+                                    e.preventDefault();
+                                    if (!cohortForm.name.trim() || creatingCohort) return;
+                                    setCreatingCohort(true);
+                                    try {
+                                        await API.post('/cohorts', cohortForm);
+                                        setCohortForm({ name: '', description: '' });
+                                        setShowCohortForm(false);
+                                        await fetchCohorts();
+                                        showToast('Cohort created!');
+                                    } catch (err) {
+                                        showToast(err?.response?.data?.message || 'Failed to create cohort', 'error');
+                                    } finally {
+                                        setCreatingCohort(false);
+                                    }
+                                }}
+                                className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 p-3 rounded-xl bg-violet-50/50 border border-dashed border-violet-200"
+                            >
+                                <div>
+                                    <label className="label">Name *</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={cohortForm.name}
+                                        onChange={(e) => setCohortForm({ ...cohortForm, name: e.target.value })}
+                                        placeholder="e.g. Batch 2025-A"
+                                        className="input"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="label">Description</label>
+                                    <input
+                                        type="text"
+                                        value={cohortForm.description}
+                                        onChange={(e) => setCohortForm({ ...cohortForm, description: e.target.value })}
+                                        placeholder="Summer internship batch"
+                                        className="input"
+                                    />
+                                </div>
+                                <div className="flex items-end">
+                                    <button type="submit" disabled={creatingCohort} className="btn-primary w-full justify-center">
+                                        {creatingCohort ? 'Creating...' : 'Create Cohort'}
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+
+                        {cohorts.length === 0 ? (
+                            <p className="text-xs text-surface-400 py-4 text-center">No cohorts yet. Create one to group your interns.</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {cohorts.map((cohort) => (
+                                    <div key={cohort._id} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-surface-50 border border-surface-100">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center text-violet-700 text-xs font-bold">
+                                                {cohort.name[0]}
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-bold text-surface-800">{cohort.name}</p>
+                                                {cohort.description && <p className="text-[10px] text-surface-400">{cohort.description}</p>}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
+                                                {cohort.internCount} intern{cohort.internCount !== 1 ? 's' : ''}
+                                            </span>
+                                            <button
+                                                onClick={async () => {
+                                                    if (!window.confirm(`Delete "${cohort.name}"? Interns won't be removed.`)) return;
+                                                    try {
+                                                        await API.delete(`/cohorts/${cohort._id}`);
+                                                        await fetchCohorts();
+                                                        showToast('Cohort deleted');
+                                                    } catch { showToast('Failed to delete', 'error'); }
+                                                }}
+                                                className="w-6 h-6 rounded-md flex items-center justify-center text-surface-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                                title="Delete cohort"
+                                            >
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </main>
             </div>

@@ -489,7 +489,7 @@ const getUserProgress = async (req, res) => {
     const userFilter = { role: "intern" };
     if (req.companyId) userFilter.companyId = req.companyId;
 
-    const users = await User.find(userFilter);
+    const users = await User.find(userFilter).populate("cohortId", "name");
 
     const result = [];
 
@@ -523,6 +523,8 @@ const getUserProgress = async (req, res) => {
       result.push({
         internId: user._id,
         internName: user.name,
+        cohortId: user.cohortId?._id || null,
+        cohortName: user.cohortId?.name || null,
         assigned,
         completed,
         pending

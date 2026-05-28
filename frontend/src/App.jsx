@@ -6,6 +6,8 @@ import InternDashboard    from './pages/InternDashboard';
 import AdminDashboard     from './pages/AdminDashboard';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import ChangePassword     from './pages/ChangePassword';
+import ChatPage           from './pages/ChatPage';
+import ForumPage          from './pages/ForumPage';
 
 function ProtectedRoute({ children, requiredRole }) {
     const { user } = useAuth();
@@ -65,6 +67,8 @@ export default function App() {
                     </ProtectedRoute>
                 }
             />
+            <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+            <Route path="/forum" element={<ProtectedRoute requiredRole="intern"><ForumPage /></ProtectedRoute>} />
             <Route path="*" element={<RoleRedirect />} />
         </Routes>
     );

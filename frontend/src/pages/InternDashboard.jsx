@@ -31,6 +31,7 @@ export default function InternDashboard() {
     const [loadingTasks, setLoadingTasks] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [completing, setCompleting] = useState(null);
+    const [cohortData, setCohortData] = useState(null);
 
     const showToast = (msg, type = 'success') => {
         setToast({ msg, type });
@@ -39,12 +40,14 @@ export default function InternDashboard() {
 
     const fetchAll = useCallback(async () => {
         try {
-            const [tasksRes, progressRes] = await Promise.all([
+            const [tasksRes, progressRes, cohortRes] = await Promise.all([
                 API.get('/tasks'),
                 API.get('/tasks/progress'),
+                API.get('/cohorts/my-members').catch(() => ({ data: null })),
             ]);
             setTasks(tasksRes.data);
             setProgress(progressRes.data);
+            if (cohortRes.data) setCohortData(cohortRes.data);
         } catch {
             showToast('Failed to load data', 'error');
         } finally {
@@ -142,11 +145,18 @@ export default function InternDashboard() {
                         <div className="flex items-center justify-between mb-5">
                             <div>
                                 <h2 className="text-base font-bold text-surface-800">Onboarding Progress</h2>
-                                <p className="text-xs text-surface-400 mt-0.5">
-                                    {progressPct === 100
-                                        ? 'Congratulations! All tasks complete!'
-                                        : `Keep going — you're ${progressPct}% there`}
-                                </p>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    <p className="text-xs text-surface-400">
+                                        {progressPct === 100
+                                            ? 'Congratulations! All tasks complete!'
+                                            : `Keep going — you're ${progressPct}% there`}
+                                    </p>
+                                    {cohortData?.cohort && (
+                                        <span className="text-[10px] font-semibold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-full border border-violet-100">
+                                            {cohortData.cohort.name}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                             {progressPct === 100 && (
                                 <span className="badge bg-emerald-100 text-emerald-700 text-xs flex items-center gap-1">
@@ -165,6 +175,50 @@ export default function InternDashboard() {
                             ))}
                         </div>
                     </div>
+
+                    {/* My Cohort */}
+                    {cohortData?.cohort && (
+                        <div className="card">
+                            <div className="flex items-center gap-2 mb-4">
+                                <div className="w-7 h-7 rounded-lg bg-violet-100 flex items-center justify-center">
+                                    <svg className="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                                </div>
+                                <div>
+                                    <h2 className="text-sm font-bold text-surface-800">My Cohort — {cohortData.cohort.name}</h2>
+                                    {cohortData.cohort.description && (
+                                        <p className="text-[10px] text-surface-400">{cohortData.cohort.description}</p>
+                                    )}
+                                </div>
+                                <span className="ml-auto text-xs font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
+                                    {cohortData.members.length + 1} member{cohortData.members.length !== 0 ? 's' : ''}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                                {/* Self */}
+                                <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-brand-50 border border-brand-100">
+                                    <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 text-xs font-bold shrink-0">
+                                        {(user?.name || '?')[0].toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-bold text-surface-800 truncate">{user?.name}</p>
+                                        <p className="text-[10px] text-brand-600 font-semibold">You</p>
+                                    </div>
+                                </div>
+                                {/* Cohort mates */}
+                                {cohortData.members.map((member) => (
+                                    <div key={member._id} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-surface-50 border border-surface-100 hover:border-violet-200 transition-colors">
+                                        <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center text-violet-700 text-xs font-bold shrink-0">
+                                            {member.name[0].toUpperCase()}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-xs font-semibold text-surface-800 truncate">{member.name}</p>
+                                            <p className="text-[10px] text-surface-400 truncate">{member.email}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Onboarding Tasks */}
                     <section>

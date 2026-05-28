@@ -23,6 +23,11 @@ const userSchema = new mongoose.Schema(
         ref: "Company"
     },
 
+    cohortId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Cohort"
+    },
+
     role: {
         type: String,
         enum: ["super_admin", "admin", "intern"],

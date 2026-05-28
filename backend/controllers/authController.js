@@ -66,7 +66,7 @@ const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email }).populate("companyId");
+    const user = await User.findOne({ email }).populate("companyId").populate("cohortId");
     if (!user) return res.status(400).json({ message: "Invalid email or password" });
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -88,6 +88,14 @@ const loginUser = async (req, res) => {
         }
       : null;
 
+    // Build cohort info if present
+    const cohort = user.cohortId
+      ? {
+          id:   user.cohortId._id,
+          name: user.cohortId.name,
+        }
+      : null;
+
     res.status(200).json({
       message: "Login successful",
       token,
@@ -98,6 +106,7 @@ const loginUser = async (req, res) => {
         role:               user.role,
         mustChangePassword: user.mustChangePassword || false,
         company,
+        cohort,
       },
     });
   } catch (error) {
@@ -151,7 +160,7 @@ const createAdmin = async (req, res) => {
 // ── CREATE INTERN (admin only) ───────────────────────────────────────────────
 const createIntern = async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, cohortId } = req.body;
     if (!name) return res.status(400).json({ message: "name is required" });
 
     const adminUser = await User.findById(req.user.id).populate("companyId");
@@ -178,6 +187,7 @@ const createIntern = async (req, res) => {
       password:           await hashPw(tempPass),
       role:               "intern",
       companyId:          company._id,
+      cohortId:           cohortId || undefined,
       mustChangePassword: true,
     });
 
